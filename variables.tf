@@ -1,35 +1,31 @@
-output "vpc_id" {
-  value = aws_vpc.ninja_vpc.id
+
+variable "region" {
+  description = "The AWS region to create resources in"
+  default     = "ap-southeast-2"
 }
 
-output "public_subnet_ids" {
-  value = aws_subnet.ninja_pub_sub[*].id
+variable "vpc_cidr" {
+  description = "The CIDR block for the VPC"
+  default     = "10.0.0.0/16"
 }
 
-output "private_subnet_ids" {
-  value = aws_subnet.ninja_priv_sub[*].id
+variable "public_subnet_cidrs" {
+  description = "The CIDR blocks for the public subnets"
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
 }
 
-output "bastion_instance_id" {
-  value = aws_instance.bastion.id
+variable "private_subnet_cidrs" {
+  description = "The CIDR blocks for the private subnets"
+  default     = ["10.0.3.0/24", "10.0.4.0/24"]
 }
 
-output "private_instance_id" {
-  value = aws_instance.private_instance.id
+variable "ami_id" {
+  description = "The AMI ID for the instances"
+  default     = "ami-080660c9757080771"
 }
 
-output "internet_gateway_id" {
-  value = aws_internet_gateway.ninja_igw.id
+variable "instance_type" {
+  description = "The instance type"
+  default     = "t2.micro"
 }
 
-output "nat_gateway_id" {
-  value = aws_nat_gateway.ninja_nat.id
-}
-
-output "public_route_table_id" {
-  value = aws_route_table.ninja_route_pub.id
-}
-
-output "private_route_table_id" {
-  value = aws_route_table.ninja_route_priv.id
-}
