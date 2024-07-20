@@ -1,29 +1,35 @@
-variable "aws_region" {
-  description = "The AWS region to create things in."
-  default     = "eu-west-1"
+output "vpc_id" {
+  value = aws_vpc.ninja_vpc.id
 }
 
-variable "key_name" {
-  description = " SSH keys to connect to ec2 instance"
-  default     =  "kmaster"
+output "public_subnet_ids" {
+  value = aws_subnet.ninja_pub_sub[*].id
 }
 
-variable "instance_type" {
-  description = "instance type for ec2"
-  default     =  "t2.micro"
+output "private_subnet_ids" {
+  value = aws_subnet.ninja_priv_sub[*].id
 }
 
-variable "security_group" {
-  description = "Name of security group"
-  default     = "my-jenkins-security-group"
+output "bastion_instance_id" {
+  value = aws_instance.bastion.id
 }
 
-variable "tag_name" {
-  description = "Tag Name of for Ec2 instance"
-  default     = "TestInstance"
+output "private_instance_id" {
+  value = aws_instance.private_instance.id
 }
 
-variable "ami_id" {
-  description = "AMI for Ubuntu Ec2 instance"
-  default     = "ami-065793e81b1869261"
+output "internet_gateway_id" {
+  value = aws_internet_gateway.ninja_igw.id
+}
+
+output "nat_gateway_id" {
+  value = aws_nat_gateway.ninja_nat.id
+}
+
+output "public_route_table_id" {
+  value = aws_route_table.ninja_route_pub.id
+}
+
+output "private_route_table_id" {
+  value = aws_route_table.ninja_route_priv.id
 }
