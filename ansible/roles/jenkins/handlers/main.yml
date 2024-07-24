@@ -1,0 +1,8 @@
+---
+# handlers file for roles/jenkins
+- name: start jenkins
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+

@@ -1,0 +1,29 @@
+- name: Install Java 17 Amazon Corretto
+  dnf:
+    name: java-17-amazon-corretto
+    state: present
+
+- name: Add Jenkins repository file
+  ansible.builtin.get_url:
+    url: "https://pkg.jenkins.io/redhat-stable/jenkins.repo"
+    dest: "/etc/yum.repos.d/jenkins.repo"
+
+- name: Import Jenkins GPG key
+  rpm_key:
+    state: present
+    key: "https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key"
+
+- name: Install Jenkins
+  dnf:
+    name: jenkins
+    state: present
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+
+
+
+

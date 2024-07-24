@@ -1,0 +1,6 @@
+---
+# vars file for roles/jenkins
+jenkins_gpg_key: "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key"
+jenkins_gpg_dest: "/usr/share/keyrings/jenkins-keyring.asc"
+jenkins_repo_url: "https://pkg.jenkins.io/debian-stable"
+

@@ -1,0 +1,3 @@
+[webservers]
+
+centos  ansible_host=3.9.29.209     ansible_user=ec2-user ansible_ssh_private_key_file=/home/suresh/Downloads/RSA1.pem

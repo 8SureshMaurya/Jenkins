@@ -1,0 +1,42 @@
+---
+- name: Ensure required packages are installed (CentOS)
+  yum:
+    name:
+      - wget
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Download Jenkins repository file (CentOS)
+  ansible.builtin.get_url:
+    url: "https://pkg.jenkins.io/redhat-stable/jenkins.repo"
+    dest: "/etc/yum.repos.d/jenkins.repo"
+  when: ansible_os_family == 'RedHat'
+
+- name: Import Jenkins GPG key (CentOS)
+  rpm_key:
+    state: present
+    key: "https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key"
+  when: ansible_os_family == 'RedHat'
+
+- name: Install required packages (CentOS)
+  yum:
+    name:
+      - java-17-openjdk
+      - fontconfig
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Install Jenkins (CentOS)
+  yum:
+    name: jenkins
+    state: present
+  when: ansible_os_family == 'RedHat'
+  notify: start jenkins
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+  notify: start jenkins
+

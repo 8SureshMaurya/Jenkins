@@ -1,0 +1,17 @@
+---
+- name: Install Jenkins on Linux
+  include_tasks: install_linux.yml
+  when: ansible_os_family == 'Debian'
+
+- include_tasks: install_jenkins_amazon_linux.yml
+  when: ansible_distribution == "Amazon" and ansible_distribution_version >= "2"
+
+- name: Install Jenkins on CentOS
+  include_tasks: install_centos.yml
+  when: ansible_os_family == 'RedHat' and ansible_distribution == 'CentOS'
+
+- name: Install Jenkins on Red Hat
+  include_tasks: install_redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_distribution == 'RedHat'
+
+

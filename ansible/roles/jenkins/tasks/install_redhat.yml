@@ -1,0 +1,43 @@
+---
+- name: Ensure required packages are installed (RedHat)
+  yum:
+    name:
+      - wget
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Download Jenkins repository file (RedHat)
+  ansible.builtin.get_url:
+    url: "https://pkg.jenkins.io/redhat-stable/jenkins.repo"
+    dest: "/etc/yum.repos.d/jenkins.repo"
+  when: ansible_os_family == 'RedHat'
+
+- name: Import Jenkins GPG key (RedHat)
+  rpm_key:
+    state: present
+    key: "https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key"
+  when: ansible_os_family == 'RedHat'
+
+- name: Install required packages (RedHat)
+  yum:
+    name:
+      - java-17-openjdk
+      - fontconfig
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Install Jenkins (RedHat)
+  yum:
+    name: jenkins
+    state: present
+  when: ansible_os_family == 'RedHat'
+  notify: start jenkins
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+  when: ansible_os_family == 'RedHat'
+  notify: start jenkins
+
