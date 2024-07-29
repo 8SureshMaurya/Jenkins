@@ -308,3 +308,20 @@ resource "aws_lb_listener" "jenkins_listener" {
     target_group_arn = aws_lb_target_group.jenkins_tg.arn
   }
 }
+
+/*Ansible-----------------------------*/
+
+# Generate the Ansible inventory file
+data "template_file" "ansible_inventory" {
+  template = file("${path.module}/inventory.tpl")
+
+  vars = {
+    bastion_public_ip = aws_instance.bastion.public_ip
+    jenkins_private_ip = aws_instance.Jenkins_server.private_ip
+  }
+}
+
+resource "local_file" "ansible_inventory" {
+  content  = data.template_file.ansible_inventory.rendered
+  filename = "${path.module}/inventory"
+}
