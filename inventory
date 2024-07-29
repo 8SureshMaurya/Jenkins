@@ -1,0 +1,6 @@
+
+[bastion]
+bastion ansible_host=34.229.40.115 ansible_user=ubuntu ansible_ssh_private_key_file=/home/suresh/Downloads/NVir.pem
+
+[jenkins]
+jenkins ansible_host=10.0.3.226 ansible_user=ubuntu ansible_ssh_private_key_file=/home/suresh/Downloads/NVir.pem ansible_ssh_common_args='-o ProxyCommand="ssh -i /home/suresh/Downloads/NVir.pem -W %h:%p ubuntu@34.229.40.115"'
