@@ -43,7 +43,7 @@ variable "ami_id" {
 variable "key_name" {
   description = "Key name for SSH access"
   type        = string
-  default     = "NVir.pem"
+  default     = "NVir"
 }
 
 variable "jenkins_user_data" {
