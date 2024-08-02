@@ -23,7 +23,7 @@ output "jenkins_lb_dns" {
   value       = aws_lb.jenkins_lb.dns_name
 }
 
-output "autoscaling_group_name" {
+output "Autoscaling_group_name" {
   description = "The name of the Auto Scaling group"
   value       = aws_autoscaling_group.jenkins_asg.name
 }
