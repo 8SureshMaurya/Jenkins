@@ -321,10 +321,11 @@ resource "aws_autoscaling_group" "jenkins_asg" {
   target_group_arns    = [aws_lb_target_group.jenkins_tg.arn]
   launch_template {
     id      = aws_launch_template.jenkins_launch_template.id
-    version = "$Latest"
+    version = "$Default"
   }
   tag {
     key                 = "Name"
+    Name                = "jenkins-asg"
     value               = "jenkins-asg"
     propagate_at_launch = true
   }
