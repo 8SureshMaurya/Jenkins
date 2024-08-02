@@ -325,7 +325,6 @@ resource "aws_autoscaling_group" "jenkins_asg" {
   }
   tag {
     key                 = "Name"
-    Name                = "jenkins-asg"
     value               = "jenkins-asg"
     propagate_at_launch = true
   }
