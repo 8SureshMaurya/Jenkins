@@ -311,11 +311,12 @@ resource "aws_lb_listener" "jenkins_listener" {
 }
 
 /*AUTOSCALLING GROUP ----------------------------------*/
+
 # Auto Scaling Group
 resource "aws_autoscaling_group" "jenkins_asg" {
-  desired_capacity     = 1
-  max_size             = 2
-  min_size             = 1
+  desired_capacity     = var.desired_capacity
+  max_size             = var.max_size
+  min_size             = var.min_size
   vpc_zone_identifier  = [aws_subnet.private_1.id, aws_subnet.private_2.id]
   target_group_arns    = [aws_lb_target_group.jenkins_tg.arn]
   launch_template {
@@ -332,9 +333,9 @@ resource "aws_autoscaling_group" "jenkins_asg" {
 # Launch Template
 resource "aws_launch_template" "jenkins_launch_template" {
   name_prefix   = "jenkins-launch-template"
-  image_id      = "ami-04a81a99f5ec58529"
-  instance_type = "t2.micro"
-  key_name      = "NVir"
+  image_id      = var.ami_id
+  instance_type = var.instance_type
+  key_name      = var.key_name
 
   network_interfaces {
     associate_public_ip_address = true
@@ -374,7 +375,7 @@ resource "aws_cloudwatch_metric_alarm" "scale_up_alarm" {
   namespace           = "AWS/EC2"
   period              = 120
   statistic           = "Average"
-  threshold           = 75
+  threshold           = var.scale_up_threshold
   alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
@@ -391,7 +392,7 @@ resource "aws_cloudwatch_metric_alarm" "scale_down_alarm" {
   namespace           = "AWS/EC2"
   period              = 120
   statistic           = "Average"
-  threshold           = 25
+  threshold           = var.scale_down_threshold
   alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
