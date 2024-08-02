@@ -331,7 +331,7 @@ resource "aws_autoscaling_group" "jenkins_asg" {
 }
 
 # Launch Template
-/*
+
 resource "aws_launch_template" "jenkins_launch_template" {
   name_prefix   = "jenkins-launch-template"
   image_id      = var.ami_id
@@ -349,7 +349,7 @@ resource "aws_launch_template" "jenkins_launch_template" {
     Name = "jenkins-launch-template"
   }
 }
-*/
+
 
 # Scaling Policy based on CPU Utilization
 resource "aws_autoscaling_policy" "scale_up_policy" {
