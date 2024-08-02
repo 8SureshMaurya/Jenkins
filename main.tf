@@ -325,3 +325,104 @@ resource "local_file" "ansible_inventory" {
   content  = data.template_file.ansible_inventory.rendered
   filename = "${path.module}/inventory"
 }
+
+/*AutoScalling-----------------------------------*/
+# ALB Listener
+resource "aws_lb_listener" "jenkins_listener" {
+  load_balancer_arn = aws_lb.jenkins_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.jenkins_tg.arn
+  }
+}
+
+# Auto Scaling Group
+resource "aws_autoscaling_group" "jenkins_asg" {
+  desired_capacity     = 1
+  max_size             = 2
+  min_size             = 1
+  vpc_zone_identifier  = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  target_group_arns    = [aws_lb_target_group.jenkins_tg.arn]
+  launch_template {
+    id      = aws_launch_template.jenkins_launch_template.id
+    version = "$Latest"
+  }
+  tag {
+    key                 = "Name"
+    value               = "jenkins-asg"
+    propagate_at_launch = true
+  }
+}
+
+# Launch Template
+resource "aws_launch_template" "jenkins_launch_template" {
+  name_prefix   = "jenkins-launch-template"
+  image_id      = "ami-04a81a99f5ec58529"
+  instance_type = "t2.micro"
+  key_name      = "NVir"
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.Private_SG.id]
+  }
+
+  user_data = filebase64("install_jenkins.sh")
+
+  tags = {
+    Name = "jenkins-launch-template"
+  }
+}
+
+# Scaling Policy based on CPU Utilization
+resource "aws_autoscaling_policy" "scale_up_policy" {
+  name                   = "scale-up-policy"
+  scaling_adjustment     = 1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 300
+  autoscaling_group_name = aws_autoscaling_group.jenkins_asg.name
+}
+
+resource "aws_autoscaling_policy" "scale_down_policy" {
+  name                   = "scale-down-policy"
+  scaling_adjustment     = -1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 300
+  autoscaling_group_name = aws_autoscaling_group.jenkins_asg.name
+}
+
+# CloudWatch Alarm for Scale Up
+resource "aws_cloudwatch_metric_alarm" "scale_up_alarm" {
+  alarm_name          = "scale-up-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 2
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 120
+  statistic           = "Average"
+  threshold           = 75
+  alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
+  }
+  alarm_actions = [aws_autoscaling_policy.scale_up_policy.arn]
+}
+
+# CloudWatch Alarm for Scale Down
+resource "aws_cloudwatch_metric_alarm" "scale_down_alarm" {
+  alarm_name          = "scale-down-alarm"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods  = 2
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 120
+  statistic           = "Average"
+  threshold           = 25
+  alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
+  }
+  alarm_actions = [aws_autoscaling_policy.scale_down_policy.arn]
+}
