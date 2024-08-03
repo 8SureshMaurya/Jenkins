@@ -312,16 +312,47 @@ resource "aws_lb_listener" "jenkins_listener" {
 
 /*AUTOSCALLING GROUP ----------------------------------*/
 
+# Launch Template
+resource "aws_ami_from_instance" "jenkins_ami" {
+  name               = "jenkins-ami"
+  description        = "AMI for Jenkins server"
+  source_instance_id = aws_instance.Jenkins_server.id
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "jenkins-ami"
+  }
+}
+
+
+# Launch Template using the Jenkins AMI
+resource "aws_launch_template" "jenkins_launch_template" {
+  name_prefix   = "jenkins-launch-template"
+  image_id      = aws_ami_from_instance.jenkins_ami.id
+  instance_type = "t2.micro"
+  key_name      = var.key_name
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.Public_SG.id]
+  }
+
+  tags = {
+    Name = "jenkins-launch-template"
+  }
+}
+
 # Auto Scaling Group
 resource "aws_autoscaling_group" "jenkins_asg" {
-  desired_capacity     = var.desired_capacity
-  max_size             = var.max_size
-  min_size             = var.min_size
-  vpc_zone_identifier  = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  target_group_arns    = [aws_lb_target_group.jenkins_tg.arn]
+  desired_capacity     = 1
+  max_size             = 2
+  min_size             = 1
+  vpc_zone_identifier  = [aws_subnet.public_1.id]
   launch_template {
     id      = aws_launch_template.jenkins_launch_template.id
-    version = "$Default"
+    version = "$Latest"
   }
   tag {
     key                 = "Name"
@@ -329,27 +360,6 @@ resource "aws_autoscaling_group" "jenkins_asg" {
     propagate_at_launch = true
   }
 }
-
-# Launch Template
-
-resource "aws_launch_template" "jenkins_launch_template" {
-  name_prefix   = "jenkins-launch-template"
-  image_id      = var.ami_id
-  instance_type = var.instance_type
-  key_name      = var.key_name
-
-  network_interfaces {
-    associate_public_ip_address = true
-    security_groups             = [aws_security_group.Private_SG.id]
-  }
-
-  user_data = filebase64("install_jenkins.sh")
-
-  tags = {
-    Name = "jenkins-launch-template"
-  }
-}
-
 
 # Scaling Policy based on CPU Utilization
 resource "aws_autoscaling_policy" "scale_up_policy" {
@@ -377,7 +387,7 @@ resource "aws_cloudwatch_metric_alarm" "scale_up_alarm" {
   namespace           = "AWS/EC2"
   period              = 120
   statistic           = "Average"
-  threshold           = var.scale_up_threshold
+  threshold           = 75
   alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
@@ -394,7 +404,7 @@ resource "aws_cloudwatch_metric_alarm" "scale_down_alarm" {
   namespace           = "AWS/EC2"
   period              = 120
   statistic           = "Average"
-  threshold           = var.scale_down_threshold
+  threshold           = 25
   alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
