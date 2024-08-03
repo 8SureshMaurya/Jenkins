@@ -249,7 +249,7 @@ resource "aws_instance" "Jenkins_server" {
   vpc_security_group_ids  = [aws_security_group.Private_SG.id]
   key_name                = var.key_name
   subnet_id               = aws_subnet.private_1.id
-  user_data               = file(var.jenkins_user_data)
+  user_data               = file("install_jenkins.sh")
   tags = {
     Name = "Jenkins_server"
   } 
