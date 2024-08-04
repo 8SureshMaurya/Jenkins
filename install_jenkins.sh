@@ -12,4 +12,6 @@ sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
   sudo apt-get update -y
   sudo apt-get install fontconfig openjdk-17-jre -y
   sudo apt-get install jenkins -y 
+  sudo systemctl enable jenkins  
+  sudo systemctl start jenkins 
   
