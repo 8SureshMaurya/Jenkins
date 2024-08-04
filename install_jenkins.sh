@@ -9,7 +9,7 @@ sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
     /etc/apt/sources.list.d/jenkins.list > /dev/null
 
  #Update your local package index, then finally install Jenkins
-  sudo apt-get update
+  sudo apt-get update -y
   sudo apt-get install fontconfig openjdk-17-jre -y
   sudo apt-get install jenkins -y 
   
