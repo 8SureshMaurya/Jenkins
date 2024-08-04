@@ -1,4 +1,3 @@
-
 terraform {
   required_providers {
     aws = {
@@ -9,12 +8,12 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-1"
 }
 
 # VPC
 resource "aws_vpc" "MyVPC" {
-  cidr_block           = var.vpc_cidr
+  cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
   instance_tenancy     = "default"
@@ -25,9 +24,9 @@ resource "aws_vpc" "MyVPC" {
 
 # Create public subnets
 resource "aws_subnet" "public_1" {
-  vpc_id                = aws_vpc.MyVPC.id
-  cidr_block            = var.public_subnet_cidrs[0]
-  availability_zone     = var.availability_zones[0]
+  vpc_id                  = aws_vpc.MyVPC.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
   tags = {
     Name = "public-subnet-1"
@@ -35,9 +34,9 @@ resource "aws_subnet" "public_1" {
 }
 
 resource "aws_subnet" "public_2" {
-  vpc_id                = aws_vpc.MyVPC.id
-  cidr_block            = var.public_subnet_cidrs[1]
-  availability_zone     = var.availability_zones[1]
+  vpc_id                  = aws_vpc.MyVPC.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
   tags = {
     Name = "public-subnet-2"
@@ -47,8 +46,8 @@ resource "aws_subnet" "public_2" {
 # Create private subnets
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.MyVPC.id
-  cidr_block        = var.private_subnet_cidrs[0]
-  availability_zone = var.availability_zones[0]
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-east-1a"
   tags = {
     Name = "private-subnet-1"
   }
@@ -56,8 +55,8 @@ resource "aws_subnet" "private_1" {
 
 resource "aws_subnet" "private_2" {
   vpc_id            = aws_vpc.MyVPC.id
-  cidr_block        = var.private_subnet_cidrs[1]
-  availability_zone = var.availability_zones[1]
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "us-east-1b"
   tags = {
     Name = "private-subnet-2"
   }
@@ -73,7 +72,7 @@ resource "aws_internet_gateway" "main_igw" {
 
 # NAT Gateway
 resource "aws_eip" "NAT" {
-  depends_on = [aws_internet_gateway.main_igw]
+  domain = "vpc"
 }
 
 resource "aws_nat_gateway" "main_nat" {
@@ -130,49 +129,49 @@ resource "aws_route_table_association" "private_2" {
   route_table_id = aws_route_table.private.id
 }
 
-/* Bastion Host SG------------------------------------*/
-
 # Security Group for Bastion Host
 resource "aws_security_group" "Public_SG" {
   name        = "public-sg-terraform"
-  description = "security group for public instances"
+  description = "Security group for public instances"
   vpc_id      = aws_vpc.MyVPC.id
 
   ingress {
-    description      = "HTTPS"
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    description      = "HTTP"
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-  }
-  ingress {
-    description      = "Allow 8080"
-    from_port        = 8080
-    to_port          = 8080
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    description      = "SSH"
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    description = "Allow 8080"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-   egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -182,60 +181,59 @@ resource "aws_security_group" "Public_SG" {
 
 # Bastion Host (public instance)
 resource "aws_instance" "bastion" {
-  ami                     = var.ami_id
-  instance_type           = var.instance_type
-  vpc_security_group_ids  = [aws_security_group.Public_SG.id]
-  key_name                = var.key_name
-  subnet_id               = aws_subnet.public_1.id
-
+  ami                    = "ami-04a81a99f5ec58529"
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.Public_SG.id]
+  key_name               = "NVir"
+  subnet_id              = aws_subnet.public_1.id
   tags = {
     Name = "ninja-bastion-host"
   }
 }
 
-/* Private Instance SG----------------------------------*/
 # Security Group for Private Instances
 resource "aws_security_group" "Private_SG" {
   name        = "private-sg-terraform"
-  description = "security group for private instances"
+  description = "Security group for private instances"
   vpc_id      = aws_vpc.MyVPC.id
 
   ingress {
-    description      = "HTTPS"
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    description      = "HTTP"
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    description      = "SSH"
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-  }
-  ingress {
-    description      = "Allow"
-    from_port        = 8080
-    to_port          = 8080
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
   }
 
- egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
+  ingress {
+    description = "Allow"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -245,21 +243,20 @@ resource "aws_security_group" "Private_SG" {
 
 # Jenkins Server (private instance)
 resource "aws_instance" "Jenkins_server" {
-  ami                     = var.ami_id
-  instance_type           = var.instance_type
-  vpc_security_group_ids  = [aws_security_group.Private_SG.id]
-  key_name                = var.key_name
-  subnet_id               = aws_subnet.private_1.id
-  user_data               = file(var.jenkins_user_data)
+  ami                    = "ami-04a81a99f5ec58529"
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.Private_SG.id]
+  key_name               = "NVir"
+  subnet_id              = aws_subnet.private_1.id
+  user_data              = file("install_jenkins.sh")
   tags = {
     Name = "Jenkins_server"
-  } 
+  }
 }
 
-
-/* Load Balancer Target Group ----------------------------------*/
+# Load Balancer Target Group
 resource "aws_lb_target_group" "jenkins_tg" {
-  name     = "jenkins-tg"
+  name     = "jenkins-tg-unique"  # Updated name
   port     = 8080
   protocol = "HTTP"
   vpc_id   = aws_vpc.MyVPC.id
@@ -279,16 +276,16 @@ resource "aws_lb_target_group" "jenkins_tg" {
   }
 }
 
-/* Register Jenkins server to Target Group --------------------*/
+# Register Jenkins server to Target Group
 resource "aws_lb_target_group_attachment" "jenkins_attachment" {
   target_group_arn = aws_lb_target_group.jenkins_tg.arn
   target_id        = aws_instance.Jenkins_server.id
   port             = 8080
 }
 
-/* Create Load Balancer ----------------------------------------*/
+# Create Load Balancer
 resource "aws_lb" "jenkins_lb" {
-  name               = "jenkins-lb"
+  name               = "jenkins-lb-unique"  # Updated name
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.Public_SG.id]
@@ -299,10 +296,10 @@ resource "aws_lb" "jenkins_lb" {
   }
 }
 
-/* Listener for Load Balancer ----------------------------------*/
+# Load Balancer Listener
 resource "aws_lb_listener" "jenkins_listener" {
   load_balancer_arn = aws_lb.jenkins_lb.arn
-  port              = 80
+  port              = "80"
   protocol          = "HTTP"
 
   default_action {
@@ -311,55 +308,46 @@ resource "aws_lb_listener" "jenkins_listener" {
   }
 }
 
-/*AUTOSCALLING GROUP ----------------------------------*/
 
-# Launch Template
-resource "aws_ami_from_instance" "jenkins_ami" {
-  name               = "jenkins-ami"
-  description        = "AMI for Jenkins server"
-  source_instance_id = aws_instance.Jenkins_server.id
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = {
-    Name = "jenkins-ami"
-  }
-}
-
-
-# Launch Template using the Jenkins AMI
+# Create Auto Scaling Launch Template
 resource "aws_launch_template" "jenkins_launch_template" {
   name_prefix   = "jenkins-launch-template"
-  image_id      = aws_ami_from_instance.jenkins_ami.id
+  image_id      = "ami-04a81a99f5ec58529"
   instance_type = "t2.micro"
-  key_name      = var.key_name
+  key_name      = "NVir"
 
   network_interfaces {
     associate_public_ip_address = true
-    security_groups             = [aws_security_group.Public_SG.id]
+    security_groups             = [aws_security_group.Private_SG.id]
   }
 
+  user_data = filebase64("install_jenkins.sh")
+
   tags = {
-    Name = "jenkins-launch-template"
+    Name = "Jenkins_Launch_Template"
   }
 }
 
-# Auto Scaling Group
+# Create Auto Scaling Group
 resource "aws_autoscaling_group" "jenkins_asg" {
-  desired_capacity     = 1
-  max_size             = 2
-  min_size             = 1
-  vpc_zone_identifier  = [aws_subnet.public_1.id]
   launch_template {
     id      = aws_launch_template.jenkins_launch_template.id
     version = "$Latest"
   }
+  vpc_zone_identifier = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  min_size            = 1
+  max_size            = 3
+  desired_capacity    = 1
+  health_check_type   = "EC2"
+  health_check_grace_period = 300
+
   tag {
     key                 = "Name"
-    value               = "jenkins-asg"
+    value               = "Jenkins_AutoScaling_Group"
     propagate_at_launch = true
   }
+
+  /*target_group_arns = [aws_lb_target_group.jenkins_tg.arn]*/
 }
 
 # Scaling Policy based on CPU Utilization
@@ -412,7 +400,6 @@ resource "aws_cloudwatch_metric_alarm" "scale_down_alarm" {
   }
   alarm_actions = [aws_autoscaling_policy.scale_down_policy.arn]
 }
-
 /*Ansible-----------------------------*/
 
 # Generate the Ansible inventory file
