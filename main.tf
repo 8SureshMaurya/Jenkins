@@ -1,3 +1,4 @@
+
 terraform {
   required_providers {
     aws = {
@@ -428,6 +429,3 @@ resource "local_file" "ansible_inventory" {
   content  = data.template_file.ansible_inventory.rendered
   filename = "${path.module}/inventory"
 }
-
-
-
