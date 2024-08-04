@@ -51,4 +51,3 @@ variable "jenkins_user_data" {
   type        = string
   default     = "install_jenkins.sh"
 }
-
