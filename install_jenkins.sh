@@ -1,4 +1,6 @@
-#! /bin/bash
+#!/bin/bash
+# Wait for the network to be ready
+sleep 30
 #Debian package repository of Jenkins to automate installation and upgrade
 sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
     https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
@@ -9,9 +11,10 @@ sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
     /etc/apt/sources.list.d/jenkins.list > /dev/null
 
  #Update your local package index, then finally install Jenkins
-  sudo apt-get update -y
+  sudo apt-get update
   sudo apt-get install fontconfig openjdk-17-jre -y
   sudo apt-get install jenkins -y 
-  sudo systemctl enable jenkins  
-  sudo systemctl start jenkins 
+  #sudo systemctl enable jenkins  
+  #sudo systemctl start jenkins  
+  
   
