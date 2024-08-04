@@ -47,32 +47,8 @@ variable "key_name" {
 }
 
 variable "jenkins_user_data" {
-  description = "Path to the Jenkins installation script"
+  description = "jenkins_user_data"
   type        = string
   default     = "install_jenkins.sh"
 }
 
-variable "desired_capacity" {
-  description = "Desired capacity for the Auto Scaling group"
-  default     = 1
-}
-
-variable "max_size" {
-  description = "Maximum size for the Auto Scaling group"
-  default     = 2
-}
-
-variable "min_size" {
-  description = "Minimum size for the Auto Scaling group"
-  default     = 1
-}
-
-variable "scale_up_threshold" {
-  description = "CPU Utilization threshold to scale up"
-  default     = 75
-}
-
-variable "scale_down_threshold" {
-  description = "CPU Utilization threshold to scale down"
-  default     = 25
-}
