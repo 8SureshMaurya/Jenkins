@@ -317,10 +317,7 @@ resource "aws_ami_from_instance" "jenkins_ami" {
   name               = "jenkins-ami"
   description        = "AMI for Jenkins server"
   source_instance_id = aws_instance.Jenkins_server.id
-  lifecycle {
-    create_before_destroy = true
-  }
-
+ 
   tags = {
     Name = "jenkins-ami"
   }
@@ -335,7 +332,7 @@ resource "aws_launch_template" "jenkins_launch_template" {
   key_name      = var.key_name
 
   network_interfaces {
-    associate_public_ip_address = true
+    associate_public_ip_address = false
     security_groups             = [aws_security_group.Public_SG.id]
   }
 
@@ -346,9 +343,9 @@ resource "aws_launch_template" "jenkins_launch_template" {
 
 # Auto Scaling Group
 resource "aws_autoscaling_group" "jenkins_asg" {
-  desired_capacity     = 1
-  max_size             = 2
-  min_size             = 1
+  desired_capacity     = 2
+  max_size             = 1
+  min_size             = 2
   vpc_zone_identifier  = [aws_subnet.public_1.id]
   launch_template {
     id      = aws_launch_template.jenkins_launch_template.id
