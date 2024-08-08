@@ -307,6 +307,24 @@ resource "aws_lb_listener" "jenkins_listener" {
     target_group_arn = aws_lb_target_group.jenkins_tg.arn
   }
 }
+# Create Auto Scaling Launch Template
+resource "aws_launch_template" "jenkins_launch_template" {
+  name_prefix   = "jenkins-launch-template"
+  image_id      = "ami-04a81a99f5ec58529"
+  instance_type = "t2.micro"
+  key_name      = "NVir"
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.Private_SG.id]
+  }
+
+  user_data = filebase64("install_jenkins.sh")
+
+  tags = {
+    Name = "Jenkins_Launch_Template"
+  }
+}
 
 
 /*Ansible-----------------------------*/
