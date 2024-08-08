@@ -22,8 +22,9 @@ output "jenkins_lb_dns" {
   description = "DNS name of the Jenkins load balancer"
   value       = aws_lb.jenkins_lb.dns_name
 }
-
+/*
 output "Autoscaling_group_name" {
   description = "The name of the Auto Scaling group"
   value       = aws_autoscaling_group.jenkins_asg.name
 }
+*/
