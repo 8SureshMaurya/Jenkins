@@ -343,9 +343,9 @@ resource "aws_launch_template" "jenkins_launch_template" {
 
 # Auto Scaling Group
 resource "aws_autoscaling_group" "jenkins_asg" {
-  desired_capacity     = 2
-  max_size             = 1
-  min_size             = 2
+  desired_capacity     = 1
+  max_size             = 2
+  min_size             = 1
   vpc_zone_identifier  = [aws_subnet.public_1.id]
   launch_template {
     id      = aws_launch_template.jenkins_launch_template.id
