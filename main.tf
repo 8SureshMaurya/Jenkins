@@ -1,4 +1,3 @@
-# Terraform and AWS provider configuration
 terraform {
   required_providers {
     aws = {
@@ -9,12 +8,12 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
-# VPC configuration
+# VPC
 resource "aws_vpc" "MyVPC" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
   instance_tenancy     = "default"
@@ -23,11 +22,11 @@ resource "aws_vpc" "MyVPC" {
   }
 }
 
-# Public Subnets
+# Create public subnets
 resource "aws_subnet" "public_1" {
-  vpc_id                  = aws_vpc.MyVPC.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-east-1a"
+  vpc_id                = aws_vpc.MyVPC.id
+  cidr_block            = var.public_subnet_cidrs[0]
+  availability_zone     = var.availability_zones[0]
   map_public_ip_on_launch = true
   tags = {
     Name = "public-subnet-1"
@@ -35,20 +34,20 @@ resource "aws_subnet" "public_1" {
 }
 
 resource "aws_subnet" "public_2" {
-  vpc_id                  = aws_vpc.MyVPC.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "us-east-1b"
+  vpc_id                = aws_vpc.MyVPC.id
+  cidr_block            = var.public_subnet_cidrs[1]
+  availability_zone     = var.availability_zones[1]
   map_public_ip_on_launch = true
   tags = {
     Name = "public-subnet-2"
   }
 }
 
-# Private Subnets
+# Create private subnets
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.MyVPC.id
-  cidr_block        = "10.0.3.0/24"
-  availability_zone = "us-east-1a"
+  cidr_block        = var.private_subnet_cidrs[0]
+  availability_zone = var.availability_zones[0]
   tags = {
     Name = "private-subnet-1"
   }
@@ -56,14 +55,14 @@ resource "aws_subnet" "private_1" {
 
 resource "aws_subnet" "private_2" {
   vpc_id            = aws_vpc.MyVPC.id
-  cidr_block        = "10.0.4.0/24"
-  availability_zone = "us-east-1b"
+  cidr_block        = var.private_subnet_cidrs[1]
+  availability_zone = var.availability_zones[1]
   tags = {
     Name = "private-subnet-2"
   }
 }
 
-# Internet Gateway
+# Create an Internet Gateway
 resource "aws_internet_gateway" "main_igw" {
   vpc_id = aws_vpc.MyVPC.id
   tags = {
@@ -73,7 +72,7 @@ resource "aws_internet_gateway" "main_igw" {
 
 # NAT Gateway
 resource "aws_eip" "NAT" {
-  domain = "vpc"
+  depends_on = [aws_internet_gateway.main_igw]
 }
 
 resource "aws_nat_gateway" "main_nat" {
@@ -84,7 +83,7 @@ resource "aws_nat_gateway" "main_nat" {
   }
 }
 
-# Public Route Table
+# Create a public route table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.MyVPC.id
   route {
@@ -107,7 +106,7 @@ resource "aws_route_table_association" "public_2" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private Route Table
+# Create a private route table
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.MyVPC.id
   route {
@@ -130,49 +129,49 @@ resource "aws_route_table_association" "private_2" {
   route_table_id = aws_route_table.private.id
 }
 
+/* Bastion Host SG------------------------------------*/
+
 # Security Group for Bastion Host
 resource "aws_security_group" "Public_SG" {
   name        = "public-sg-terraform"
-  description = "Security group for public instances"
+  description = "security group for public instances"
   vpc_id      = aws_vpc.MyVPC.id
 
   ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "HTTPS"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "HTTP"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+  ingress {
+    description      = "Allow 8080"
+    from_port        = 8080
+    to_port          = 8080
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   ingress {
-    description = "Allow 8080"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+   egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -182,59 +181,60 @@ resource "aws_security_group" "Public_SG" {
 
 # Bastion Host (public instance)
 resource "aws_instance" "bastion" {
-  ami                    = "ami-04a81a99f5ec58529"
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.Public_SG.id]
-  key_name               = "NVir"
-  subnet_id              = aws_subnet.public_1.id
+  ami                     = var.ami_id
+  instance_type           = var.instance_type
+  vpc_security_group_ids  = [aws_security_group.Public_SG.id]
+  key_name                = var.key_name
+  subnet_id               = aws_subnet.public_1.id
+
   tags = {
     Name = "ninja-bastion-host"
   }
 }
 
+/* Private Instance SG----------------------------------*/
 # Security Group for Private Instances
 resource "aws_security_group" "Private_SG" {
   name        = "private-sg-terraform"
-  description = "Security group for private instances"
+  description = "security group for private instances"
   vpc_id      = aws_vpc.MyVPC.id
 
   ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "HTTPS"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description      = "HTTP"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
+    description      = "SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
-
   ingress {
-    description = "Allow"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
+    description      = "Allow"
+    from_port        = 8080
+    to_port          = 8080
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+ egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -244,20 +244,20 @@ resource "aws_security_group" "Private_SG" {
 
 # Jenkins Server (private instance)
 resource "aws_instance" "Jenkins_server" {
-  ami                    = "ami-04a81a99f5ec58529"
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.Private_SG.id]
-  key_name               = "NVir"
-  subnet_id              = aws_subnet.private_1.id
-  user_data              = file("install_jenkins.sh")
+  ami                     = var.ami_id
+  instance_type           = var.instance_type
+  vpc_security_group_ids  = [aws_security_group.Private_SG.id]
+  key_name                = var.key_name
+  subnet_id               = aws_subnet.private_1.id
+  user_data               = file(var.jenkins_user_data)
   tags = {
     Name = "Jenkins_server"
-  }
+  } 
 }
 
-# Load Balancer Target Group
+/* Load Balancer Target Group ----------------------------------*/
 resource "aws_lb_target_group" "jenkins_tg" {
-  name     = "jenkins-tg-unique"
+  name     = "jenkins-tg"
   port     = 8080
   protocol = "HTTP"
   vpc_id   = aws_vpc.MyVPC.id
@@ -277,16 +277,16 @@ resource "aws_lb_target_group" "jenkins_tg" {
   }
 }
 
-# Register Jenkins server to Target Group
+/* Register Jenkins server to Target Group --------------------*/
 resource "aws_lb_target_group_attachment" "jenkins_attachment" {
   target_group_arn = aws_lb_target_group.jenkins_tg.arn
   target_id        = aws_instance.Jenkins_server.id
   port             = 8080
 }
 
-# Create Load Balancer
+/* Create Load Balancer ----------------------------------------*/
 resource "aws_lb" "jenkins_lb" {
-  name               = "jenkins-lb-unique"
+  name               = "jenkins-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.Public_SG.id]
@@ -297,10 +297,10 @@ resource "aws_lb" "jenkins_lb" {
   }
 }
 
-# Load Balancer Listener
+/* Listener for Load Balancer ----------------------------------*/
 resource "aws_lb_listener" "jenkins_listener" {
   load_balancer_arn = aws_lb.jenkins_lb.arn
-  port              = "80"
+  port              = 80
   protocol          = "HTTP"
 
   default_action {
@@ -309,14 +309,14 @@ resource "aws_lb_listener" "jenkins_listener" {
   }
 }
 
-/* Ansible Configuration */
+/*Ansible-----------------------------*/
 
 # Generate the Ansible inventory file
 data "template_file" "ansible_inventory" {
   template = file("${path.module}/inventory.tpl")
 
   vars = {
-    bastion_public_ip  = aws_instance.bastion.public_ip
+    bastion_public_ip = aws_instance.bastion.public_ip
     jenkins_private_ip = aws_instance.Jenkins_server.private_ip
   }
 }
@@ -325,3 +325,5 @@ resource "local_file" "ansible_inventory" {
   content  = data.template_file.ansible_inventory.rendered
   filename = "${path.module}/inventory"
 }
+
+/*AutoScalling-----------------------------------*/
