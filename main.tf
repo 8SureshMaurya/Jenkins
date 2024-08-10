@@ -1,3 +1,4 @@
+# Terraform and AWS provider configuration
 terraform {
   required_providers {
     aws = {
@@ -11,7 +12,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# VPC
+# VPC configuration
 resource "aws_vpc" "MyVPC" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -22,7 +23,7 @@ resource "aws_vpc" "MyVPC" {
   }
 }
 
-# Create public subnets
+# Public Subnets
 resource "aws_subnet" "public_1" {
   vpc_id                  = aws_vpc.MyVPC.id
   cidr_block              = "10.0.1.0/24"
@@ -43,7 +44,7 @@ resource "aws_subnet" "public_2" {
   }
 }
 
-# Create private subnets
+# Private Subnets
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.MyVPC.id
   cidr_block        = "10.0.3.0/24"
@@ -62,7 +63,7 @@ resource "aws_subnet" "private_2" {
   }
 }
 
-# Create an Internet Gateway
+# Internet Gateway
 resource "aws_internet_gateway" "main_igw" {
   vpc_id = aws_vpc.MyVPC.id
   tags = {
@@ -83,7 +84,7 @@ resource "aws_nat_gateway" "main_nat" {
   }
 }
 
-# Create a public route table
+# Public Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.MyVPC.id
   route {
@@ -106,7 +107,7 @@ resource "aws_route_table_association" "public_2" {
   route_table_id = aws_route_table.public.id
 }
 
-# Create a private route table
+# Private Route Table
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.MyVPC.id
   route {
@@ -256,7 +257,7 @@ resource "aws_instance" "Jenkins_server" {
 
 # Load Balancer Target Group
 resource "aws_lb_target_group" "jenkins_tg" {
-  name     = "jenkins-tg-unique"  # Updated name
+  name     = "jenkins-tg-unique"
   port     = 8080
   protocol = "HTTP"
   vpc_id   = aws_vpc.MyVPC.id
@@ -285,7 +286,7 @@ resource "aws_lb_target_group_attachment" "jenkins_attachment" {
 
 # Create Load Balancer
 resource "aws_lb" "jenkins_lb" {
-  name               = "jenkins-lb-unique"  # Updated name
+  name               = "jenkins-lb-unique"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.Public_SG.id]
@@ -308,106 +309,14 @@ resource "aws_lb_listener" "jenkins_listener" {
   }
 }
 
-
-# Create Auto Scaling Launch Template
-resource "aws_launch_template" "jenkins_launch_template" {
-  name_prefix   = "jenkins-launch-template"
-  image_id      = "ami-04a81a99f5ec58529"
-  instance_type = "t2.micro"
-  key_name      = "NVir"
-
-  network_interfaces {
-    associate_public_ip_address = true
-    security_groups             = [aws_security_group.Private_SG.id]
-  }
-
-  user_data = filebase64("install_jenkins.sh")
-
-  tags = {
-    Name = "Jenkins_Launch_Template"
-  }
-}
-
-# Create Auto Scaling Group
-resource "aws_autoscaling_group" "jenkins_asg" {
-  launch_template {
-    id      = aws_launch_template.jenkins_launch_template.id
-    version = "$Latest"
-  }
-  vpc_zone_identifier = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  min_size            = 1
-  max_size            = 3
-  desired_capacity    = 1
-  health_check_type   = "EC2"
-  health_check_grace_period = 300
-
-  tag {
-    key                 = "Name"
-    value               = "Jenkins_AutoScaling_Group"
-    propagate_at_launch = true
-  }
-
-  /*target_group_arns = [aws_lb_target_group.jenkins_tg.arn]*/
-}
-
-# Scaling Policy based on CPU Utilization
-resource "aws_autoscaling_policy" "scale_up_policy" {
-  name                   = "scale-up-policy"
-  scaling_adjustment     = 1
-  adjustment_type        = "ChangeInCapacity"
-  cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.jenkins_asg.name
-}
-
-resource "aws_autoscaling_policy" "scale_down_policy" {
-  name                   = "scale-down-policy"
-  scaling_adjustment     = -1
-  adjustment_type        = "ChangeInCapacity"
-  cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.jenkins_asg.name
-}
-
-# CloudWatch Alarm for Scale Up
-resource "aws_cloudwatch_metric_alarm" "scale_up_alarm" {
-  alarm_name          = "scale-up-alarm"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = 2
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = 120
-  statistic           = "Average"
-  threshold           = 75
-  alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
-  dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
-  }
-  alarm_actions = [aws_autoscaling_policy.scale_up_policy.arn]
-}
-
-# CloudWatch Alarm for Scale Down
-resource "aws_cloudwatch_metric_alarm" "scale_down_alarm" {
-  alarm_name          = "scale-down-alarm"
-  comparison_operator = "LessThanOrEqualToThreshold"
-  evaluation_periods  = 2
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = 120
-  statistic           = "Average"
-  threshold           = 25
-  alarm_description   = "This metric monitors CPU utilization for Auto Scaling"
-  dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.jenkins_asg.name
-  }
-  alarm_actions = [aws_autoscaling_policy.scale_down_policy.arn]
-}
-/*Ansible-----------------------------*/
+/* Ansible Configuration */
 
 # Generate the Ansible inventory file
 data "template_file" "ansible_inventory" {
   template = file("${path.module}/inventory.tpl")
 
   vars = {
-    bastion_public_ip = aws_instance.bastion.public_ip
+    bastion_public_ip  = aws_instance.bastion.public_ip
     jenkins_private_ip = aws_instance.Jenkins_server.private_ip
   }
 }
