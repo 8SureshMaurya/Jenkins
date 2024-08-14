@@ -345,3 +345,22 @@ resource "aws_lb_listener" "main_lb_listener" {
     Name = "main-lb-listener"
   }
 }
+
+
+
+/* Ansible Configuration */
+
+# Generate the Ansible inventory file
+data "template_file" "ansible_inventory" {
+  template = file("${path.module}/inventory.tpl")
+
+  vars = {
+    bastion_public_ip  = aws_instance.bastion.public_ip
+    jenkins_private_ip = aws_instance.Jenkins_server.private_ip
+  }
+}
+
+resource "local_file" "ansible_inventory" {
+  content  = data.template_file.ansible_inventory.rendered
+  filename = "${path.module}/inventory"
+}
