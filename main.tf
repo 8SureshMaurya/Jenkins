@@ -1,4 +1,3 @@
-# Terraform and AWS provider configuration
 terraform {
   required_providers {
     aws = {
@@ -73,7 +72,7 @@ resource "aws_internet_gateway" "main_igw" {
 
 # NAT Gateway
 resource "aws_eip" "NAT" {
-  domain = "vpc"
+  vpc = true
 }
 
 resource "aws_nat_gateway" "main_nat" {
@@ -203,7 +202,7 @@ resource "aws_security_group" "Private_SG" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
   }
 
   ingress {
@@ -211,7 +210,7 @@ resource "aws_security_group" "Private_SG" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
   }
 
   ingress {
@@ -283,71 +282,57 @@ resource "aws_lb_target_group_attachment" "jenkins_attachment" {
   target_id        = aws_instance.Jenkins_server.id
   port             = 8080
 }
-# Security Group for Private Instances
+
+# Security Group for Load Balancer
 resource "aws_security_group" "Target_Group" {
   name        = "Target_Group"
-  description = "Security group for Target_Group"
+  description = "Security group for load balancer"
   vpc_id      = aws_vpc.MyVPC.id
-
-  ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["49.36.168.123/32"]
-  }
 
   ingress {
     description = "HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["49.36.168.123/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["49.36.168.123/32"]  # Restrict to VPC CIDR block
-  }
-
-  ingress {
-    description = "Allow"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["49.36.168.123/32"]  # Restrict to VPC CIDR block
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["49.36.168.123/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
-    Name = "Target_Group"
+    Name = "Target_Group_SG"
   }
 }
-# Create Load Balancer
-resource "aws_lb" "jenkins_lb" {
-  name               = "jenkins-lb-unique"
+
+# Load Balancer
+resource "aws_lb" "main_lb" {
+  name               = "main-lb-unique"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.Target_Group.id]
   subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
 
   tags = {
-    Name = "jenkins-lb"
+    Name = "main-lb"
   }
 }
 
 # Load Balancer Listener
-resource "aws_lb_listener" "jenkins_listener" {
-  load_balancer_arn = aws_lb.jenkins_lb.arn
+resource "aws_lb_listener" "main_lb_listener" {
+  load_balancer_arn = aws_lb.main_lb.arn
   port              = "80"
   protocol          = "HTTP"
 
@@ -355,21 +340,8 @@ resource "aws_lb_listener" "jenkins_listener" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.jenkins_tg.arn
   }
-}
 
-/* Ansible Configuration */
-
-# Generate the Ansible inventory file
-data "template_file" "ansible_inventory" {
-  template = file("${path.module}/inventory.tpl")
-
-  vars = {
-    bastion_public_ip  = aws_instance.bastion.public_ip
-    jenkins_private_ip = aws_instance.Jenkins_server.private_ip
+  tags = {
+    Name = "main-lb-listener"
   }
-}
-
-resource "local_file" "ansible_inventory" {
-  content  = data.template_file.ansible_inventory.rendered
-  filename = "${path.module}/inventory"
 }
