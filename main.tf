@@ -329,7 +329,7 @@ resource "aws_security_group" "Target_Group" {
   }
 
   tags = {
-    Name = "Private_SG"
+    Name = "Target_Group"
   }
 }
 # Create Load Balancer
