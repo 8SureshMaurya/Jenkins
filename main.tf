@@ -283,13 +283,61 @@ resource "aws_lb_target_group_attachment" "jenkins_attachment" {
   target_id        = aws_instance.Jenkins_server.id
   port             = 8080
 }
+# Security Group for Private Instances
+resource "aws_security_group" "Target_Group" {
+  name        = "Target_Group"
+  description = "Security group for Target_Group"
+  vpc_id      = aws_vpc.MyVPC.id
 
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["49.36.168.123/32"]
+  }
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["49.36.168.123/32"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["49.36.168.123/32"]  # Restrict to VPC CIDR block
+  }
+
+  ingress {
+    description = "Allow"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["49.36.168.123/32"]  # Restrict to VPC CIDR block
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["49.36.168.123/32"]
+  }
+
+  tags = {
+    Name = "Private_SG"
+  }
+}
 # Create Load Balancer
 resource "aws_lb" "jenkins_lb" {
   name               = "jenkins-lb-unique"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.Public_SG.id]
+  security_groups    = [aws_security_group.Target_Group.id]
   subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
 
   tags = {
