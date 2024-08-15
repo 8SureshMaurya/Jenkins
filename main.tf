@@ -1,3 +1,4 @@
+# Terraform and AWS provider configuration
 terraform {
   required_providers {
     aws = {
@@ -72,7 +73,7 @@ resource "aws_internet_gateway" "main_igw" {
 
 # NAT Gateway
 resource "aws_eip" "NAT" {
-  vpc = true
+  domain = "vpc"
 }
 
 resource "aws_nat_gateway" "main_nat" {
@@ -202,7 +203,7 @@ resource "aws_security_group" "Private_SG" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
@@ -210,7 +211,7 @@ resource "aws_security_group" "Private_SG" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]  # Restrict to VPC CIDR block
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
@@ -317,22 +318,22 @@ resource "aws_security_group" "Target_Group" {
   }
 }
 
-# Load Balancer
-resource "aws_lb" "main_lb" {
-  name               = "main-lb-unique"
+# Create Load Balancer
+resource "aws_lb" "jenkins_lb" {
+  name               = "jenkins-lb-unique"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.Target_Group.id]
   subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
 
   tags = {
-    Name = "main-lb"
+    Name = "jenkins-lb"
   }
 }
 
 # Load Balancer Listener
-resource "aws_lb_listener" "main_lb_listener" {
-  load_balancer_arn = aws_lb.main_lb.arn
+resource "aws_lb_listener" "jenkins_listener" {
+  load_balancer_arn = aws_lb.jenkins_lb.arn
   port              = "80"
   protocol          = "HTTP"
 
@@ -340,13 +341,7 @@ resource "aws_lb_listener" "main_lb_listener" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.jenkins_tg.arn
   }
-
-  tags = {
-    Name = "main-lb-listener"
-  }
 }
-
-
 
 /* Ansible Configuration */
 
